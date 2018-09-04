@@ -1,9 +1,9 @@
 # GeoCDB
 Experimental Code for Conversion and Profiling the Proposed Implementation of GeoPackage in the OGC CDB
 
-<span style="color:red">
-##Warning: 
-</span>
+
+##Warning:
+
 This code will modify an existing CDB repository by adding GeoPackage files and
 removing ShapeFiles. ##This will permanently alter the CDB database##.
 
