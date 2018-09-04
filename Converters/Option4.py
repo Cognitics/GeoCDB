@@ -334,7 +334,7 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     cursor.execute("COMMIT TRANSACTION")
     return convertedFields
 
-def translateCDB(cDBRoot):
+def translateCDB(cDBRoot, removeShapefile):
     datasourceDict = {}
     ogrDriver = ogr.GetDriverByName("GPKG")
     # Look for the Tiles Directory
@@ -421,14 +421,19 @@ def translateCDB(cDBRoot):
         if(featureCount>0):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
-        #converter.removeShapeFile(cDBRoot + shapefile)
+        if(removeShapefile):
+            converter.removeShapeFile(cDBRoot + shapefile)
 
 
-if(len(sys.argv) != 2):
-		print("Usage: Option4.py <Root CDB Directory>")
+print("Usage: Option4.py <Root CDB Directory> [remove-shapefiles]")
         print("Example:")
         print("Option4.py F:\GeoCDB\Option4")
+        print("\n-or-\n")
+        print("Option4.py F:\GeoCDB\Option4 remove-shapefiles")
 		return
 cDBRoot = sys.argv[1]
+removeShapefile = False
+if((len(sys.argv)==4):
+    removeShapefile = True
 
-translateCDB(cDBRoot)
+translateCDB(cDBRoot,removeShapefile)
