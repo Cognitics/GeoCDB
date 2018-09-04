@@ -24,7 +24,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 import sys
 import subprocess
-import shapeindex
+
 import converter
 try:
     from osgeo import ogr, osr, gdal
@@ -34,7 +34,7 @@ from dbfread import DBF
 import sqlite3
 
 version_num = int(gdal.VersionInfo('VERSION_NUM'))
-print("GDAL Version " + version_num)
+print("GDAL Version " + str(version_num))
 
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
@@ -42,6 +42,9 @@ if version_num < 2020300:
 #Find all shapefiles, convert to gpkg with ogr2ogr
 
 def translateCDB(cDBRoot,ogrPath, removeShapefile):
+    sys.path.append(cDBRoot)
+    import shapeindex
+
     for shapefile in shapeindex.shapeFiles:
         geoPackageFile = cDBRoot + shapefile[0:-3] + "gpkg"
         shapefile = cDBRoot + shapefile;
@@ -52,16 +55,21 @@ def translateCDB(cDBRoot,ogrPath, removeShapefile):
 
 
 if(len(sys.argv) != 3  and len(sys.argv) != 4):
-		print("Usage: Option1.py <Root CDB Directory> <Path to ogr2ogr executable> [remove-shapefiles]")
-        print("Example:")
-        print("Option1.py F:\GeoCDB\Option1 F:\Python36_64\Lib\site-packages\osgeo\ogr2ogr.exe")
-        print("\n-or-\n")
-        print("Option1.py F:\GeoCDB\Option1 F:\Python36_64\Lib\site-packages\osgeo\ogr2ogr.exe remove-shapefiles")
-		return
+    print("Usage: Option1.py <Root CDB Directory> <Path to ogr2ogr executable> [remove-shapefiles]")
+    print("Example:")
+    print("Option1.py F:\GeoCDB\Option1 F:\Python36_64\Lib\site-packages\osgeo\ogr2ogr.exe")
+    print("\n-or-\n")
+    print("Option1.py F:\GeoCDB\Option1 F:\Python36_64\Lib\site-packages\osgeo\ogr2ogr.exe remove-shapefiles")
+    exit()
 cDBRoot = sys.argv[1]
 ogr2ogrPath = sys.argv[2]
 removeShapefile = False
-if((len(sys.argv)==4):
+if((len(sys.argv)==4) and sys.argv[3]=="remove-shapefiles"):
     removeShapefile = True
 
+sys.path.append(cDBRoot)
+if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
+    cDBRoot = cDBRoot + '/'
+import generateMetaFiles
+generateMetaFiles.generateMetaFiles(cDBRoot)
 translateCDB(cDBRoot, ogr2ogrPath, removeShapefile)

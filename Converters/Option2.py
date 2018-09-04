@@ -27,7 +27,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 import sys
 import subprocess
-import shapeindex
+
 import converter
 
 try:
@@ -38,13 +38,16 @@ from dbfread import DBF
 import sqlite3
 
 version_num = int(gdal.VersionInfo('VERSION_NUM'))
-print("GDAL Version " + version_num)
+print("GDAL Version " + str(version_num))
 
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
 
 def translateCDB(cDBRoot, removeShapefile):
+
+    sys.path.append(cDBRoot)
+    import shapeindex
 
     ogrDriver = ogr.GetDriverByName("GPKG")
 
@@ -128,23 +131,21 @@ def translateCDB(cDBRoot, removeShapefile):
     datasourceDict = {}
 
 
-if(len(sys.argv) != 2):
-		print("Usage: Option2.py <Root CDB Directory>")
-        print("Example:")
-        print("Option2.py F:\GeoCDB\Option2")
-		return
-cDBRoot = sys.argv[1]
-
 if(len(sys.argv) != 2  and len(sys.argv) != 3):
-		print("Usage: Option2.py <Root CDB Directory> [remove-shapefiles]")
-        print("Example:")
-        print("Option2.py F:\GeoCDB\Option2")
-        print("\n-or-\n")
-        print("Option2.py F:\GeoCDB\Option2 remove-shapefiles")
-		return
+    print("Usage: Option2.py <Root CDB Directory> [remove-shapefiles]")
+    print("Example:")
+    print("Option2.py F:\GeoCDB\Option2")
+    print("\n-or-\n")
+    print("Option2.py F:\GeoCDB\Option2 remove-shapefiles")
+    exit()
 cDBRoot = sys.argv[1]
 removeShapefile = False
-if((len(sys.argv)==4):
+if((len(sys.argv)==3) and sys.argv[2]=="remove-shapefiles"):
     removeShapefile = True
 
+sys.path.append(cDBRoot)
+if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
+    cDBRoot = cDBRoot + '/'
+import generateMetaFiles
+generateMetaFiles.generateMetaFiles(cDBRoot)
 translateCDB(cDBRoot,removeShapefile)

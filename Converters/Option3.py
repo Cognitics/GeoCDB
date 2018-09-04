@@ -23,7 +23,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 import os
 import sys
-import shapeindex
 import converter
 
 try:
@@ -34,12 +33,11 @@ from dbfread import DBF
 import sqlite3
 
 version_num = int(gdal.VersionInfo('VERSION_NUM'))
-print("GDAL Version " + version_num)
+print("GDAL Version " + str(version_num))
 
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
-cDBRoot = r'F:\GeoCDB\Option3'
 
 def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclassSelector, extAttrSelector):
     featureCount = 0;
@@ -339,6 +337,8 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     return convertedFields
 
 def translateCDB(cDBRoot, removeShapefile):
+    sys.path.append(cDBRoot)
+    import shapeindex
     datasourceDict = {}
     ogrDriver = ogr.GetDriverByName("GPKG")
     # Look for the Tiles Directory
@@ -430,15 +430,23 @@ def translateCDB(cDBRoot, removeShapefile):
         if(removeShapeFile):
             converter.removeShapeFile(cDBRoot + shapefile)
 
-print("Usage: Option3.py <Root CDB Directory> [remove-shapefiles]")
-        print("Example:")
-        print("Option3.py F:\GeoCDB\Option3")
-        print("\n-or-\n")
-        print("Option3.py F:\GeoCDB\Option3 remove-shapefiles")
-		return
+if(len(sys.argv)!=3 and len(sys.argv)!=2):
+    print("Usage: Option3.py <Root CDB Directory> [remove-shapefiles]")
+    print("Example:")
+    print("Option3.py F:\GeoCDB\Option3")
+    print("\n-or-\n")
+    print("Option3.py F:\GeoCDB\Option3 remove-shapefiles")
+    exit()
+
+
 cDBRoot = sys.argv[1]
 removeShapefile = False
-if((len(sys.argv)==4):
+if((len(sys.argv)==3) and sys.argv[2]=="remove-shapefiles"):
     removeShapefile = True
 
+sys.path.append(cDBRoot)
+if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
+    cDBRoot = cDBRoot + '/'
+import generateMetaFiles
+generateMetaFiles.generateMetaFiles(cDBRoot)
 translateCDB(cDBRoot,removeShapefile)
