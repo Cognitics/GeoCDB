@@ -4,9 +4,26 @@ Copyright 2018, US Army Geospatial Center, Leidos Inc., and Cognitics Inc.
 Developed as a joint work by The Army Geospatial Center, Leidos Inc., 
 and Cognitics Inc. 
 
-Permission is granted to use this code for any purpose as long as this
-copyright and permission header remains intact in each source file.
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, subject 
+to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
+
+
+
 import os
 import sys
 import subprocess
@@ -21,24 +38,14 @@ from dbfread import DBF
 import sqlite3
 
 version_num = int(gdal.VersionInfo('VERSION_NUM'))
-print(version_num)
-if version_num < 1100000:
-    sys.exit('ERROR: Python bindings of GDAL 1.10 or later required')
+print("GDAL Version " + version_num)
 
-cDBRoot = r'F:\GeoCDB\Option2'
+if version_num < 2020300:
+    sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
-ogr2ogrPath = r'F:\Python36_64\Lib\site-packages\osgeo\ogr2ogr.exe'
 
-#Find all shapefiles, convert to gpkg with ogr2ogr
+def translateCDB(cDBRoot, removeShapefile):
 
-def translateCDB(cDBRoot):
-    '''
-    for shapefile in shapeindex.shapeFiles:
-        geoPackageFile = cDBRoot + shapefile[0:-3] + "gpkg"
-        shapefile = cDBRoot + shapefile;
-        subprocess.call([ogr2ogrPath,'-f', 'GPKG',geoPackageFile,shapefile])
-        print(shapefile + ' -> ' + geoPackageFile)
-    '''
     ogrDriver = ogr.GetDriverByName("GPKG")
 
     datasourceDict = {}
@@ -114,13 +121,30 @@ def translateCDB(cDBRoot):
         outLayer.CommitTransaction()
         print("Translated " + str(featureCount) + " features.")
         dataSource = None
-        #converter.removeShapeFile(shapefile)
+        if(removeShapefile):
+            converter.removeShapeFile(shapefile)
     for ds in datasourceDict.values():
         ds = None
     datasourceDict = {}
 
 
-#translateCDB(cDBRoot)
+if(len(sys.argv) != 2):
+		print("Usage: Option2.py <Root CDB Directory>")
+        print("Example:")
+        print("Option2.py F:\GeoCDB\Option2")
+		return
+cDBRoot = sys.argv[1]
 
-for shapefile in shapeindex.shapeFiles:
-    converter.removeShapeFile(cDBRoot + shapefile)
+if(len(sys.argv) != 2  and len(sys.argv) != 3):
+		print("Usage: Option2.py <Root CDB Directory> [remove-shapefiles]")
+        print("Example:")
+        print("Option2.py F:\GeoCDB\Option2")
+        print("\n-or-\n")
+        print("Option2.py F:\GeoCDB\Option2 remove-shapefiles")
+		return
+cDBRoot = sys.argv[1]
+removeShapefile = False
+if((len(sys.argv)==4):
+    removeShapefile = True
+
+translateCDB(cDBRoot,removeShapefile)
