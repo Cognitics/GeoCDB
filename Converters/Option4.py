@@ -23,7 +23,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 import os
 import sys
-import shapeindex
 import converter
 
 try:
@@ -68,7 +67,7 @@ def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclas
         opendbf = True
         extendedAttrFields = convertDBF(sqliteCon,dbfFilename,extendedAttrTableName, 'Feature Extended Attributes')
     shpFields = []
-    featureCount,shpFields = convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName,fClassRecords)
+    featureCount = convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName,fClassRecords)
     
     return featureCount
 
@@ -258,7 +257,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         outFeature = None
         inFeature = layer.GetNextFeature()
 
-    return featureCount,convertedFields
+    return featureCount
 
 #Return a dictionary of dictionaries 
 #The top level dictionary maps CNAME values to a dictionary of key/value pairs representing column names -> values
@@ -335,6 +334,8 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     return convertedFields
 
 def translateCDB(cDBRoot, removeShapefile):
+    sys.path.append(cDBRoot)
+    import shapeindex
     datasourceDict = {}
     ogrDriver = ogr.GetDriverByName("GPKG")
     # Look for the Tiles Directory
@@ -344,10 +345,10 @@ def translateCDB(cDBRoot, removeShapefile):
     #   Walk the subdirectory below this
     for shapefile in shapeindex.shapeFiles:
         fileparts = shapefile.split('\\')
-        subdir = cDBRoot
-        for i in range(len(fileparts)-3):
+        subdir = ""
+        for i in range(len(fileparts)-4):
             if(i==0):
-                subdir + fileparts[i]
+                subdir = fileparts[i]
             else:
                 subdir = subdir + "\\" + fileparts[i]
         lat = fileparts[-6]
@@ -360,7 +361,8 @@ def translateCDB(cDBRoot, removeShapefile):
         # strip out the .shp
         shapename = base[0:-4]
         # Create a geotile geopackage
-        fullGpkgPath = subdir + ".gpkg"
+        fullGpkgPath = subdir + "/" + lat + lon + ".gpkg"
+
         gpkgFile = None
         if(fullGpkgPath in datasourceDict.keys()):
             gpkgFile = datasourceDict[fullGpkgPath]
@@ -389,7 +391,7 @@ def translateCDB(cDBRoot, removeShapefile):
         
         featureClassAttrTableName = ""
         extendedAttrTableName = ""
-        dbfFilename = cDBRoot + shapefile
+        dbfFilename = shapefile
         print(dbfFilename)
 
         # If it's a polygon (T005)
@@ -422,8 +424,7 @@ def translateCDB(cDBRoot, removeShapefile):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
         if(removeShapefile):
-            converter.removeShapeFile(cDBRoot + shapefile)
-
+            converter.removeShapefile(cDBRoot + shapefile)
 
 if(len(sys.argv)!=3 and len(sys.argv)!=2):
     print("Usage: Option4.py <Root CDB Directory> [remove-shapefiles]")

@@ -51,8 +51,8 @@ def translateCDB(cDBRoot, removeShapefile):
 
     ogrDriver = ogr.GetDriverByName("GPKG")
 
-    datasourceDict = {}
-   
+    gpkgFileName = cDBRoot + "CDB.gpkg"
+    gpkgFile = None
     for shapefile in shapeindex.shapeFiles:
         
         fileparts = shapefile.split('\\')
@@ -67,12 +67,9 @@ def translateCDB(cDBRoot, removeShapefile):
         dataset = fileparts[-4]
         gpkgFileName = subdir + "\\" + lat + "\\" + lon + "\\" + dataset + ".gpkg"
         #dataset
-        gpkgFile = None
-        if(gpkgFileName in datasourceDict.keys()):
-            gpkgFile = datasourceDict[gpkgFileName]
-        else:
+        
+        if(gpkgFile == None):
             gpkgFile = ogrDriver.CreateDataSource(gpkgFileName)
-            datasourceDict[gpkgFileName] = gpkgFile
         if(gpkgFile == None):
             print("Unable to create " + gpkgFileName)
             continue

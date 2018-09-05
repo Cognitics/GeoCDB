@@ -46,10 +46,11 @@ def translateCDB(cDBRoot,ogrPath, removeShapefile):
     import shapeindex
 
     for shapefile in shapeindex.shapeFiles:
-        geoPackageFile = cDBRoot + shapefile[0:-3] + "gpkg"
-        shapefile = cDBRoot + shapefile;
-        subprocess.call([ogrPath,'-f', 'GPKG', '-t_srs', 'EPSG:4326', geoPackageFile,shapefile])
-        print(shapefile + ' -> ' + geoPackageFile)
+        geoPackageFile = shapefile[0:-3] + "gpkg"
+        if(os.path.getsize(shapefile)>0):
+            #'-t_srs', 'EPSG:4326', '-s_srs', 'EPSG:4326', 
+            subprocess.call([ogrPath,'-f', 'GPKG', geoPackageFile,shapefile])
+            print(shapefile + ' -> ' + geoPackageFile)
         if(removeShapefile):
             converter.removeShapeFile(shapefile)
 

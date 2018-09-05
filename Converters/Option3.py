@@ -123,7 +123,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
 
     
     #Create the layer if it doesn't already exist.
-    outLayerName = datasetName + "_" + lod + "_" +componentSelector1 + "_" +componentSelector2
+    outLayerName = datasetName + "_" + lod + "_" + componentSelector1 + "_" + componentSelector2
 
     outLayer = gpkgFile.GetLayerByName(outLayerName)
     fieldIdx = 0
@@ -348,10 +348,10 @@ def translateCDB(cDBRoot, removeShapefile):
     #   Walk the subdirectory below this
     for shapefile in shapeindex.shapeFiles:
         fileparts = shapefile.split('\\')
-        subdir = cDBRoot
+        subdir = ""
         for i in range(len(fileparts)-3):
             if(i==0):
-                subdir + fileparts[i]
+                subdir = fileparts[i]
             else:
                 subdir = subdir + "\\" + fileparts[i]
         lat = fileparts[-6]
@@ -393,7 +393,7 @@ def translateCDB(cDBRoot, removeShapefile):
         
         featureClassAttrTableName = ""
         extendedAttrTableName = ""
-        dbfFilename = cDBRoot + shapefile
+        dbfFilename = shapefile
         print(dbfFilename)
 
         # If it's a polygon (T005)
@@ -427,8 +427,8 @@ def translateCDB(cDBRoot, removeShapefile):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
         
-        if(removeShapeFile):
-            converter.removeShapeFile(cDBRoot + shapefile)
+        if(removeShapefile):
+            converter.removeShapefile(cDBRoot + shapefile)
 
 if(len(sys.argv)!=3 and len(sys.argv)!=2):
     print("Usage: Option3.py <Root CDB Directory> [remove-shapefiles]")
@@ -448,5 +448,5 @@ sys.path.append(cDBRoot)
 if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
     cDBRoot = cDBRoot + '/'
 import generateMetaFiles
-generateMetaFiles.generateMetaFiles(cDBRoot)
+#generateMetaFiles.generateMetaFiles(cDBRoot)
 translateCDB(cDBRoot,removeShapefile)
