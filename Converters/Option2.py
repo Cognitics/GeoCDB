@@ -65,7 +65,7 @@ def translateCDB(cDBRoot, removeShapefile):
         lat = fileparts[-6]
         lon = fileparts[-5]
         dataset = fileparts[-4]
-        gpkgFileName = subdir + "\\" + lat + "\\" + lon + "\\" + dataset + ".gpkg"
+       # gpkgFileName = subdir + "\\" + lat + "\\" + lon + "\\" + dataset + ".gpkg"
         #dataset
         
         if(gpkgFile == None):
@@ -73,7 +73,8 @@ def translateCDB(cDBRoot, removeShapefile):
         if(gpkgFile == None):
             print("Unable to create " + gpkgFileName)
             continue
-        shapefile = cDBRoot + shapefile
+        if(os.path.getsize(shapefile)<=0):
+            continue
         dataSource = ogr.Open(shapefile)
         if(dataSource==None):
             print("Unable to open " + shapefile)

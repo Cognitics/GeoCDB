@@ -54,7 +54,7 @@ gpkgDriver = ogr.GetDriverByName("GPKG")
 
 def gatherGeoPackageStats(cDBRoot):
     totalLayerCount = 0
-
+    totalOpenTime = 0
     geoPackageStats = []
     for root, dirs, files in os.walk(cDBRoot):
         path = root.split(os.sep)
@@ -79,12 +79,13 @@ def gatherGeoPackageStats(cDBRoot):
                     #print("Closed " + filePath)
                     geoPackageEnd = datetime.datetime.now()
                     geoPackageDelta = geoPackageEnd - geoPackageStart
+                    totalOpenTime = totalOpenTime + geoPackageDelta.total_seconds()
                     stat = [str(filePath),str(layerCount),str(geoPackageDelta.total_seconds())]
                     geoPackageStats.append(stat)
                 except Exception:
                         pass
-
-    return len(geoPackageStats),totalLayerCount
+    averageOpenTime = totalOpenTime / len(geoPackageStats)
+    return len(geoPackageStats),totalLayerCount, averageOpenTime
 '''
     geoPackageStats.sort()
     #write a csv file
@@ -103,12 +104,12 @@ def gatherGeoPackageStats(cDBRoot):
 #total time
 
 #gatherGeoPackageStats("f:\\GeoCDB\\")
-print("Option, Total GeoPackage Files, Average Layers")
-numFiles,numLayers = gatherGeoPackageStats("f:\\GeoCDB\\Option1")
-print("Option 1, " + numFiles + "," + numLayers / numFiles)
-numFiles,numLayers = gatherGeoPackageStats("f:\\GeoCDB\\Option2")
-print("Option 2, " + numFiles + "," + numLayers / numFiles)
-numFiles,numLayers = gatherGeoPackageStats("f:\\GeoCDB\\Option3")
-print("Option 3, " + numFiles + "," + numLayers / numFiles)
-numFiles,numLayers = gatherGeoPackageStats("f:\\GeoCDB\\Option4")
-print("Option 4, " + numFiles + "," + numLayers / numFiles)
+print("Option, Total GeoPackage Files, Average Layers, Average Open GeoPackage Time")
+#numFiles,numLayers,avgOpen = gatherGeoPackageStats("f:\\GeoCDB\\Option1")
+#print("Option 1, " + str(numFiles) + "," + str(numLayers / numFiles), + "," + str(avgOpen))
+#numFiles,numLayers,avgOpen = gatherGeoPackageStats("f:\\GeoCDB\\Option2")
+#print("Option 2, " + str(numFiles) + "," + str(numLayers / numFiles), + "," + str(avgOpen))
+#numFiles,numLayers,avgOpen = gatherGeoPackageStats("f:\\GeoCDB\\Option3")
+#print("Option 3, " + str(numFiles) + "," + str(numLayers / numFiles), + "," + str(avgOpen))
+numFiles,numLayers,avgOpen = gatherGeoPackageStats("f:\\GeoCDB\\Option4")
+print("Option 4, " + str(numFiles) + "," + str(numLayers / numFiles), + "," + str(avgOpen))

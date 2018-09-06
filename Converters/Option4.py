@@ -121,7 +121,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
     rref = filenameParts[6]   
 
     #Create the layer if it doesn't already exist.
-    outLayerName = datasetName + "_" +componentSelector1 + "_" +componentSelector2
+    outLayerName = datasetName + "_" + componentSelector1 + "_" + componentSelector2
 
     outLayer = gpkgFile.GetLayerByName(outLayerName)
     fieldIndexes = {}
@@ -361,7 +361,7 @@ def translateCDB(cDBRoot, removeShapefile):
         # strip out the .shp
         shapename = base[0:-4]
         # Create a geotile geopackage
-        fullGpkgPath = subdir + "/" + lat + lon + ".gpkg"
+        fullGpkgPath = subdir + "/" + datasetName + ".gpkg"
 
         gpkgFile = None
         if(fullGpkgPath in datasourceDict.keys()):

@@ -62,4 +62,4 @@ def restoreCDB(fromCDB, toCDB):
                 print(fromPath + " -> " + destPath)
                 copyfile(fromPath,destPath)
 
-restoreCDB("d:\\cdb", "f:\GeoCDB\Option2")
+restoreCDB("d:\\cdb", "f:\GeoCDB\Option4")
