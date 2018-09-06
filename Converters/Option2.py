@@ -124,9 +124,7 @@ def translateCDB(cDBRoot, removeShapefile):
         dataSource = None
         if(removeShapefile):
             converter.removeShapeFile(shapefile)
-    for ds in datasourceDict.values():
-        ds = None
-    datasourceDict = {}
+    gpkgFile = None
 
 
 if(len(sys.argv) != 2  and len(sys.argv) != 3):
