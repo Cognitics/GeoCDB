@@ -1,5 +1,5 @@
 # GeoCDB
-Experimental Code for Conversion and Profiling the Proposed Implementation of GeoPackage in the OGC CDB
+Experimental Code for Conversion and Profiling the Proposed Implementation of [GeoPackage](http://www.geopackage.org) in the [Open Geospatial Consortium (OGC)](http://www.opengeospatial.org/) [CDB Standard](http://www.opengeospatial.org/standards/cdb)
 
 
 ## Warning:
