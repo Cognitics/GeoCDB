@@ -24,6 +24,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 import sys
 import subprocess
+import matchingClassDBF
 
 import converter
 try:
@@ -50,6 +51,18 @@ def translateCDB(cDBRoot,ogrPath, removeShapefile):
         if(os.path.getsize(shapefile)>0):
             #'-t_srs', 'EPSG:4326', '-s_srs', 'EPSG:4326', 
             subprocess.call([ogrPath,'-f', 'GPKG', geoPackageFile,shapefile])
+            classDBF=matchingClassDBF.matchingClassDBF(shapefile)
+            if (classDBF):
+                print("Merging Class DBF values")
+                thisClassDBFvalues=matchingClassDBF.readDBF(classDBF)
+                mygpkg=matchingClassDBF.CDBgeopackage(geoPackageFile)
+                #mygpkg.print()
+                matchingClassDBF.insertClassValueInGPKGinstance(mygpkg,thisClassDBFvalues)
+#                matchingClassDBF.insertClassValueInGPKGtable(mygpkg,thisClassDBFvalues)
+                mygpkg.close()
+                mygpkg=None
+
+
             print(shapefile + ' -> ' + geoPackageFile)
         if(removeShapefile):
             converter.removeShapeFile(shapefile)
