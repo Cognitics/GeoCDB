@@ -51,8 +51,76 @@ def createLayer(gpkgFile, layerName, fieldDefs):
         outLayer = gpkgFile.CreateLayer(layerName,srs,geom_type=layerDefinition.GetGeomType())
     return outLayer
     
+def getFeatureClassSelector(fclassSelector):
+    # If it's a polygon (T005)
+        # T006 Polygon feature class attributes
+        if(fclassSelector=='T005'):
+            return 'T006'
+        # If it's a point feature (T001)
+        # T002 Point feature class attributes
+        elif(fclassSelector=='T001'):
+            return 'T002'
+        # If it's a lineal (T003)
+        # T004 Lineal feature class attributes
+        elif(fclassSelector=='T003'):
+            return 'T004'
+        # If it's a Lineal Figure Point Feature (T007)
+        # T008 Lineal Figure Point feature class attributes
+        elif(fclassSelector=='T007'):
+            return'T008'
+        # If it's a Polygon Figure Point Feature (T009)
+        # T010 Polygon figure point feature class attributes
+        elif(fclassSelector=='T009'):
+            return'T010'
+
+def getExtendedAttributesSelector(fclassSelector):
+    # If it's a polygon (T005)
+        # T018 Polygon Feature Extended-level attributes
+        if(fclassSelector=='T005'):
+            return 'T018'
+        # If it's a point feature (T001)
+        # T016 Point Feature Extended-level attributes
+        elif(fclassSelector=='T001'):
+            return 'T016'
+        # If it's a lineal (T003)
+        # T017 Lineal Feature Extended-level attributes
+        elif(fclassSelector=='T003'):
+            return 'T017'
+        # If it's a Lineal Figure Point Feature (T007)
+        # T019 Lineal Figure Extended-level attributes
+        elif(fclassSelector=='T007'):
+            return'T019'
+        # If it's a Polygon Figure Point Feature (T009)
+        # T020 Polygon Figure Extended-level attributes
+        elif(fclassSelector=='T009'):
+            return'T020'
+
+
+def getSelector2(shpFilename):
+    base = os.path.basename(shpFilename)
+    selector2 = base[18:22]
+    return selector2
+
+
+def getFeatureClassAttrFileName(shpFilename):
+    #get the selector of the feature table
+    featuresSelector2 = getSelector2(shpFilename)
+    #get the corresponding feature class table
+    fcAttrSelector = getFeatureClassSelector(featuresSelector2)
+    dbfFilename = shpFilename.replace(featuresSelector2,fcAttrSelector)
+    dbfFilename = dbfFilename.replace('.shp','.dbf')
+    base = os.path.basename(dbfFilename)
+    return base.replace(featuresSelector2,fcAttrSelector)
+
+def getOutputGeoPackageFilePath(shpFilename,cdbInputPath,cdbOutputPath):
+    inputDir = os.path.dirname(shpFilename)
+    outputDir = inputDir.replace(cdbInputPath,cdbOutputPath)
+    fulloutputFilePath = os.path.join(outputDir,shpFilename)
+    fullGPKGOutputFilePath = fulloutputFilePath[0:-4] + '.gpkg'
+    return os.path.join(outputDir,fullGPKGOutputFilePath)
+
 def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclassSelector, extAttrSelector):
-    featureCount = 0;
+    featureCount = 0
     dbfFilename = shpFilename
     base = os.path.basename(dbfFilename)
     featureTableName = base[:-4]

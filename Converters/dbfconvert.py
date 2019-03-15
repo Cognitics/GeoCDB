@@ -1,4 +1,5 @@
 
+from dbfread import DBF
 
 #Return a dictionary of dictionaries 
 #The top level dictionary maps CNAME values to a dictionary of key/value pairs representing column names -> values
