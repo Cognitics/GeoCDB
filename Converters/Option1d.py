@@ -26,7 +26,7 @@ import sys
 import subprocess
 
 import converter
-from dbfconvert import DBF
+import dbfconvert
 
 try:
     from osgeo import ogr, osr, gdal
@@ -57,7 +57,8 @@ def getOutputLayerName(shpFilename):
 def getFilenameComponents(shpFilename):
     components = {}
     filenameOnly = os.path.basename(shpFilename)
-    filenameParts = filenameOnly.split("_")
+    baseName,ext = os.path.splitext(filenameOnly)
+    filenameParts = baseName.split("_")
     datasetCode = filenameParts[1]
     components['datasetcode'] = datasetCode
     componentSelector1 = filenameParts[2]
@@ -73,13 +74,18 @@ def getFilenameComponents(shpFilename):
 
     return components
 
+#TODO: Add fields for FC attributes, and link values in
 def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
     dbfFilename = converter.getFeatureClassAttrFileName(shpFilename)
+
+    #If this isn't a feature shapefile (e.g. a FC or extended attr), just ignore and continue
+    if(dbfFilename==None):
+        return None
     convertedFields = []
     fClassRecords = {}
     layerComponents = getFilenameComponents(shpFilename)
     if(os.path.isfile(dbfFilename)):
-        fClassRecords = DBF.readDBF(dbfFilename)
+        fClassRecords = dbfconvert.readDBF(dbfFilename)
 
     dataSource = ogr.Open(shpFilename)
     if(dataSource==None):
@@ -215,41 +221,32 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_2"], layerComponents['selector2'])
         outFeature.SetField(fieldIndexes["_LOD"], layerComponents['lod'])
         outFeature.SetField(fieldIndexes["_UREF"], layerComponents['uref'])
-        outFeature.SetField(fieldIndexes["_RREF"], layerComponents['href'])
+        outFeature.SetField(fieldIndexes["_RREF"], layerComponents['rref'])
         
-        '''
-        # set the output features to match the input features
-        for i in range(layerDefinition.GetFieldCount()):
-            # Look for CNAM to link to the fClassRecord fields
-            fieldName = layerDefinition.GetFieldDefn(i).GetNameRef()
-            if(fieldName in ("_DATASET_CODE","_COMPONENT_SELECTOR_1","_COMPONENT_SELECTOR_2","_LOD","_UREF","_RREF")):
-                continue
-            if(fieldName in fclassRecord):
-                fieldValue = fclassRecord[fieldName]
-            if((fclassRecord != None) and (fieldName in fclassRecord)):
-               outFeature.SetField(fieldIndexes[fieldName], fieldValue)
-            else:
-               outFeature.SetField(fieldIndexes[fieldName],inFeature.GetField(i))
-        '''
+        #flatten attributes from the feature class attributes table
+        if(cnamValue in fClassRecords.keys()):
+            fclassFields = fClassRecords[cnamValue]
+            for field in fclassFields.keys():
+                outFeature.SetField(fieldIndexes[field],fclassFields[field])
+
         #write the feature
         outLayer.CreateFeature(outFeature)
         outFeature = None
         inFeature = layer.GetNextFeature()
-    
+    gpkgFile.CommitTransaction()
     return featureCount
 
 #convert a shapefile into a GeoPackage file using GDAL.
 def convertTable(sqliteCon, shpFilename, cdbInputDir, cdbOutputDir):
     import converter
     fcAttrName = converter.getFeatureClassAttrFileName(shpFilename)    
-    
+    if(fcAttrName==None):
+        return None
     #Create the features table, adding the feature class columns
     outputGeoPackageFile = converter.getOutputGeoPackageFilePath(shpFilename,cdbInputDir, cdbOutputDir)
     ogrDriver = ogr.GetDriverByName("GPKG")
     #create the extended attributes table
-    
-    #Read the feature class attributes into a table
-    fcAttrRows = DBF.readDBF(fcAttrName)
+
     #Read all the feature records from the DBF at once (using GDAL)
     copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
 
@@ -263,70 +260,13 @@ def convertExtendedAttributes(sqliteCon,dbfFileName,gpkgLayerName):
     #DBF.convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     return
 
-def translateCDB(cDBRoot,ogrPath, removeShapefile):
-    sys.path.append(cDBRoot)
-    import shapeindex
+def translateCDB(cdbInputDir, cdbOutputDir):
+    sys.path.append(cdbInputDir)
+    import generateMetaFiles
+    shapeFiles = generateMetaFiles.generateMetaFiles(cDBRoot)
 
-    datasourceDict = {}
-    ogrDriver = ogr.GetDriverByName("GPKG")
-    for shapefile in shapeindex.shapeFiles:
-        fileparts = shapefile.split('\\')
-        subdir = ""
-        for i in range(len(fileparts)-4):
-            if(i==0):
-                subdir = fileparts[i]
-            else:
-                subdir = subdir + "\\" + fileparts[i]
-        lat = fileparts[-6]
-        lon = fileparts[-5]
-        datasetName = fileparts[-4]
-        UXX = fileparts[-3]
-        LXX = fileparts[-2]
-        base = fileparts[-1]
-        selector2 = base[18:22]
-        # strip out the .shp
-        shapename = base[0:-4]
-        # Create a geotile geopackage
-        fullGpkgPath = subdir + "/" + datasetName + ".gpkg"
-
-        gpkgFile = None
-        if(fullGpkgPath in datasourceDict.keys()):
-            gpkgFile = datasourceDict[fullGpkgPath]
-        else:
-            gpkgFile = ogrDriver.CreateDataSource(fullGpkgPath)
-            datasourceDict[fullGpkgPath] = gpkgFile
-        if(gpkgFile == None):
-            print("Unable to create " + fullGpkgPath)
-            continue
-        gpkgFile.StartTransaction()
-        dbfFilename = shapefile
-        sqliteCon = sqlite3.connect(fullGpkgPath)
-        if(selector2=='T005'):
-            featureCount = convertTable(gpkgFile,sqliteCon,datasetName,dbfFilename,selector2,'T006','T018')
-
-        # If it's a point feature (T001)
-        # T002 Point feature class attributes
-        # T016 Point Feature Extended-level attributes
-        elif(selector2=='T001'):
-            featureCount = convertTable(gpkgFile,sqliteCon,datasetName,dbfFilename,selector2,'T002','T016')
-        # If it's a lineal (T003)
-        # T004 Lineal feature class attributes
-        # T017 Lineal Feature Extended-level attributes
-        elif(selector2=='T003'):
-            featureCount = convertTable(gpkgFile,sqliteCon,datasetName,dbfFilename,selector2,'T004','T017')
-        # If it's a Lineal Figure Point Feature (T007)
-        # T019 Lineal Figure Extended-level attributes
-        # T008 Lineal Figure Point feature class attributes
-        elif(selector2=='T007'):
-            featureCount = convertTable(gpkgFile,sqliteCon,datasetName,dbfFilename,selector2,'T008','T019')
-        # If it's a Polygon Figure Point Feature (T009)
-        # T010 Polygon figure point feature class attributes
-        # T020 Polygon Figure Extended-level attributes
-        elif(selector2=='T009'):
-            featureCount = convertTable(gpkgFile,sqliteCon,datasetName,dbfFilename,selector2,'T010','T020')
-        if(featureCount>0):
-            print("Translated " + str(featureCount) + " features.")
-        gpkgFile.CommitTransaction()
+    for shapefile in shapeFiles:
+        convertTable(None,shapefile,cdbInputDir,cdbOutputDir)
 
 
 if(len(sys.argv) != 3):
@@ -335,8 +275,5 @@ if(len(sys.argv) != 3):
 
 cDBRoot = sys.argv[1]
 outputDirectory = sys.argv[2]
-
-#generate a list of all the shapefiles.
-import generateMetaFiles
-generateMetaFiles.generateMetaFiles(cDBRoot)
+translateCDB(cDBRoot,outputDirectory)
 

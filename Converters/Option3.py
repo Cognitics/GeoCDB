@@ -40,7 +40,7 @@ if version_num < 2020300:
 
 
 def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclassSelector, extAttrSelector):
-    featureCount = 0;
+    featureCount = 0
     dbfFilename = shpFilename
     base = os.path.basename(dbfFilename)
     featureTableName = base[:-4]

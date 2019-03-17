@@ -107,10 +107,12 @@ def getFeatureClassAttrFileName(shpFilename):
     featuresSelector2 = getSelector2(shpFilename)
     #get the corresponding feature class table
     fcAttrSelector = getFeatureClassSelector(featuresSelector2)
+    if(fcAttrSelector==None):
+        return None
+
     dbfFilename = shpFilename.replace(featuresSelector2,fcAttrSelector)
     dbfFilename = dbfFilename.replace('.shp','.dbf')
-    base = os.path.basename(dbfFilename)
-    return base.replace(featuresSelector2,fcAttrSelector)
+    return dbfFilename
 
 def getOutputGeoPackageFilePath(shpFilename,cdbInputPath,cdbOutputPath):
     inputDir = os.path.dirname(shpFilename)
