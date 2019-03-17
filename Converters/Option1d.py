@@ -41,6 +41,10 @@ print("GDAL Version " + str(version_num))
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
+def cleanPath(path):
+    cleanPath = path.replace("\\",'/')
+    return cleanPath
+
 def getOutputLayerName(shpFilename):
     filenameOnly = os.path.basename(shpFilename)
     filenameParts = filenameOnly.split("_")
@@ -244,6 +248,10 @@ def convertTable(sqliteCon, shpFilename, cdbInputDir, cdbOutputDir):
         return None
     #Create the features table, adding the feature class columns
     outputGeoPackageFile = converter.getOutputGeoPackageFilePath(shpFilename,cdbInputDir, cdbOutputDir)
+    # Make whatever directories we need for the output file.
+    parentDirectory = os.path.dirname(cleanPath(outputGeoPackageFile))
+    if not os.path.exists(parentDirectory):
+        os.makedirs(parentDirectory)
     ogrDriver = ogr.GetDriverByName("GPKG")
     #create the extended attributes table
 

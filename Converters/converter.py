@@ -115,11 +115,12 @@ def getFeatureClassAttrFileName(shpFilename):
     return dbfFilename
 
 def getOutputGeoPackageFilePath(shpFilename,cdbInputPath,cdbOutputPath):
+    baseShapefileName = os.path.basename(shpFilename)
     inputDir = os.path.dirname(shpFilename)
     outputDir = inputDir.replace(cdbInputPath,cdbOutputPath)
-    fulloutputFilePath = os.path.join(outputDir,shpFilename)
+    fulloutputFilePath = os.path.join(outputDir,baseShapefileName)
     fullGPKGOutputFilePath = fulloutputFilePath[0:-4] + '.gpkg'
-    return os.path.join(outputDir,fullGPKGOutputFilePath)
+    return fullGPKGOutputFilePath
 
 def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclassSelector, extAttrSelector):
     featureCount = 0
