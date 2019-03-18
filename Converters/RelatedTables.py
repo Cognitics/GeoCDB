@@ -31,7 +31,7 @@ def addRelatedMediaTable(sqliteCon, tableName):
     query = "CREATE TABLE IF NOT EXISTS '" + tableName + "' ( id INTEGER PRIMARY KEY AUTOINCREMENT, data BLOB NOT NULL, content_type TEXT NOT NULL )"
     cur = sqliteCon.cursor()
     cur.execute("BEGIN")
-    
+    #todo
     sqliteCon.commit()
 
 def addRelationshipTable(sqliteCon, relationship):
@@ -39,6 +39,10 @@ def addRelationshipTable(sqliteCon, relationship):
     cur.execute("BEGIN")
     query = "CREATE TABLE IF NOT EXISTS '" + relationship.mappingTableName  + "' ( base_id INTEGER NOT NULL, related_id INTEGER NOT NULL )"
     cur.execute(query)
+    query = '''
+        INSERT INTO gpkgext_relations (base_table_name,base_primary_column,related_table_name,related_primary_column,
+            relation_name,mapping_table_name) VALUES(?,?,?,?,?,?)"
+            '''
     parameters = (relationship.baseTableName,
         relationship.baseTableColumn,
         relationship.relatedTableName,
@@ -46,6 +50,7 @@ def addRelationshipTable(sqliteCon, relationship):
         relationship.relationshipName,
         relationship.mappingTableName)
     cur.execute(query,parameters)
+    
     sqliteCon.commit()
 
 def getRelationshipTables(sqliteCon, tableName):
@@ -55,6 +60,7 @@ def getRelationshipTables(sqliteCon, tableName):
     cur.execute(query,(tableName))
     for row in cur:
         relationship = Relationship()
+        relationship.baseTableName = row["base_table_name"]
         relationship.baseTableColumn = row["base_primary_column"]
         relationship.relatedTableName = row["related_table_name"]
         relationship.relatedTableColumn = row["related_primary_column"]

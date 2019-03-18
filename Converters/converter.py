@@ -24,19 +24,12 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 import sys
+import dbfread
 
-
-#need functions to
-
-#create a geopackage file
-
-#create a layer with a specified set of fields
-
-#copy all the features from a shapefile into a layer inside the GeoPackage
-
-#create a non-spatial table with the specified attributes
-
-#copy all rows from a dbf file into a geopackage/sqlite layer
+try:
+    from osgeo import ogr, osr, gdal
+except:
+    sys.exit('ERROR: cannot find GDAL/OGR modules')
 
 def removeShapeFile(shpFile):
     os.remove(shpFile)
@@ -44,13 +37,6 @@ def removeShapeFile(shpFile):
     os.remove(shpFile[0:-3] + "dbt")
     os.remove(shpFile[0:-3] + "shx")
 
-def createLayer(gpkgFile, layerName, fieldDefs):
-    outLayer = gpkgFile.GetLayerByName(outLayerName)
-
-    if(outLayer==None):
-        outLayer = gpkgFile.CreateLayer(layerName,srs,geom_type=layerDefinition.GetGeomType())
-    return outLayer
-    
 def getFeatureClassSelector(fclassSelector):
     # If it's a polygon (T005)
         # T006 Polygon feature class attributes
@@ -114,6 +100,22 @@ def getFeatureClassAttrFileName(shpFilename):
     dbfFilename = dbfFilename.replace('.shp','.dbf')
     return dbfFilename
 
+def getExtendedAttrFileName(shpFilename):
+    #get the selector of the feature table
+    featuresSelector2 = getSelector2(shpFilename)
+    #get the corresponding feature class table
+    fcAttrSelector = getExtendedAttributesSelector(featuresSelector2)
+    if(fcAttrSelector==None):
+        return None
+    dbfFilename = shpFilename.replace(featuresSelector2,fcAttrSelector)
+    dbfFilename = dbfFilename.replace('.shp','.dbf')
+    return dbfFilename
+
+def getFeatureAttrTableName(shpFilename):
+    tableName = os.path.basename(shpFilename)[0:-4]
+    return tableName
+
+
 def getOutputGeoPackageFilePath(shpFilename,cdbInputPath,cdbOutputPath):
     baseShapefileName = os.path.basename(shpFilename)
     inputDir = os.path.dirname(shpFilename)
@@ -155,17 +157,17 @@ def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclas
     
     return featureCount
 
-
-def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
+'''
+def convertSHP(sqliteCon,shpFilename,gpkgFilename,fClassRecords = None, includeComponents = True):
     convertedFields = []
     featureCount = 0
     
     filenameOnly = os.path.basename(shpFilename)
-    cdbFileName = filenameOnly[0:-4]
+    #cdbFileName = filenameOnly[0:-4]
     base,ext = os.path.splitext(filenameOnly)
     dataSource = ogr.Open(shpFilename)
     if(dataSource==None):
-        # print("Unable to open " + shpFilename)
+        print("Unable to open " + shpFilename)
         return 0
     layer = dataSource.GetLayer(0)
     if(layer == None):
@@ -176,107 +178,119 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
     srs.ImportFromEPSG(4326)
 
     filenameParts = base.split("_")
-    datasetCode = filenameParts[1]
-    componentSelector1 = filenameParts[2]
-    componentSelector2 = filenameParts[3]
-    lod = filenameParts[4]
-    uref = filenameParts[5]
-    rref = filenameParts[6]   
+    #datasetCode = filenameParts[1]
+    #componentSelector1 = filenameParts[2]
+    #componentSelector2 = filenameParts[3]
+    #lod = filenameParts[4]
+    #uref = filenameParts[5]
+    #rref = filenameParts[6]
 
-    
+    gpkgFile = ogrDriver.CreateDataSource(gpkgFilename)
+    fieldIndexes = {}
+    fieldIdx = 0
     #Create the layer if it doesn't already exist.
-    outLayerName = datasetName + componentSelector1 + componentSelector2
-
-    outLayer = gpkgFile.GetLayerByName(outLayerName)
+    outLayerName = getFeatureAttrTableName(shpFilename)
+    outLayer = outputDataSource.GetLayerByName(outLayerName)
 
     if(outLayer==None):
-        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        outLayer = outputDataSource.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        if(outLayer==None):
+            print("Unable to create layer " + outLayerName)
+            exit(0)
         
-        fieldIndexes = {}
-        fieldIdx = 0
         # Add fields
         for i in range(layerDefinition.GetFieldCount()):
             fieldName =  layerDefinition.GetFieldDefn(i).GetName()
             fieldTypeCode = layerDefinition.GetFieldDefn(i).GetType()
-            fieldType = layerDefinition.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode)
-            fieldWidth = layerDefinition.GetFieldDefn(i).GetWidth()
-            GetPrecision = layerDefinition.GetFieldDefn(i).GetPrecision()
+            #fieldType = layerDefinition.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode)
+            #fieldWidth = layerDefinition.GetFieldDefn(i).GetWidth()
+            #precision = layerDefinition.GetFieldDefn(i).GetPrecision()
             fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
             outLayer.CreateField(fieldDef)
             convertedFields.append(fieldName)
             fieldIndexes[fieldName] = fieldIdx
             fieldIdx += 1
 
-        # Add the LOD and UXX fields
-        fieldName =  "_DATASET_CODE"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+        if(includeComponents):
+            # Add the LOD and UXX fields
+            fieldName =  "_DATASET_CODE"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
-        fieldName =  "_COMPONENT_SELECTOR_1"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+            fieldName =  "_COMPONENT_SELECTOR_1"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
-        fieldName =  "_COMPONENT_SELECTOR_2"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+            fieldName =  "_COMPONENT_SELECTOR_2"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
-        fieldName =  "_LOD"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+            fieldName =  "_LOD"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
-        fieldName =  "_UREF"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+            fieldName =  "_UREF"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
-        fieldName =  "_RREF"
-        fieldTypeCode = ogr.OFTString
-        fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
-        outLayer.CreateField(fieldDef)
-        convertedFields.append(fieldName)
-        fieldIndexes[fieldName] = fieldIdx
-        fieldIdx += 1
+            fieldName =  "_RREF"
+            fieldTypeCode = ogr.OFTString
+            fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+            outLayer.CreateField(fieldDef)
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
 
         #create fields for featureClass Attributes
-    
-        for recordCNAM, row in fClassRecords.items():
-            for fieldName,fieldValue in row.items():
-                if(fieldName in convertedFields):
-                    continue
-                fieldTypeCode = ogr.OFTString
-                if(isinstance(fieldValue,float)):
-                    fieldTypeCode = ogr.OFSTFloat32
-                if(isinstance(fieldValue,int)):
-                    fieldTypeCode = ogr.OFTInteger
-                if(isinstance(fieldValue,bool)):
-                    fieldTypeCode = ogr.OFSTBoolean
-                fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
+        if(fClassRecords != None):
+            for recordCNAM, row in fClassRecords.items():
+                for fieldName,fieldValue in row.items():
+                    if(fieldName in convertedFields):
+                        continue
+                    fieldTypeCode = ogr.OFTString
+                    if(isinstance(fieldValue,float)):
+                        fieldTypeCode = ogr.OFSTFloat32
+                    if(isinstance(fieldValue,int)):
+                        fieldTypeCode = ogr.OFTInteger
+                    if(isinstance(fieldValue,bool)):
+                        fieldTypeCode = ogr.OFSTBoolean
+                    fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
 
-                outLayer.CreateField(fieldDef)
-                convertedFields.append(fieldName)
-                fieldIndexes[fieldName] = fieldIdx
-                fieldIdx += 1
-            #read one record to get the field name/types
-            break
+                    outLayer.CreateField(fieldDef)
+                    convertedFields.append(fieldName)
+                    fieldIndexes[fieldName] = fieldIdx
+                    fieldIdx += 1
+                #read one record to get the field name/types
+                break
+    else:
+        #Get the field indexes
+        outLayerDefinition = outLayer.GetLayerDefn()
+        for i in range(outLayerDefinition.GetFieldCount()):
+            fieldName =  outLayerDefinition.GetFieldDefn(i).GetName()
+            convertedFields.append(fieldName)
+            fieldIndexes[fieldName] = fieldIdx
+            fieldIdx += 1
+
     outLayer.StartTransaction()
     layerDefinition = outLayer.GetLayerDefn()
     layer.ResetReading()
@@ -287,14 +301,15 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         outFeature = ogr.Feature(layerDefinition)
         inGeometry = inFeature.GetGeometryRef()
         outFeature.SetGeometry(inGeometry)
-        cnamValue = inFeature.GetField('CNAM')
-        fclassRecord = fClassRecords[cnamValue]
-        outFeature.SetField("_DATASET_CODE", filenameParts[1])
-        outFeature.SetField("_COMPONENT_SELECTOR_1", filenameParts[2])
-        outFeature.SetField("_COMPONENT_SELECTOR_2", filenameParts[3])
-        outFeature.SetField("_LOD", filenameParts[4])
-        outFeature.SetField("_UREF", filenameParts[5])
-        outFeature.SetField("_RREF", filenameParts[6])
+        if(includeComponents):
+            cnamValue = inFeature.GetField('CNAM')
+            fclassRecord = fClassRecords[cnamValue]
+            outFeature.SetField("_DATASET_CODE", filenameParts[1])
+            outFeature.SetField("_COMPONENT_SELECTOR_1", filenameParts[2])
+            outFeature.SetField("_COMPONENT_SELECTOR_2", filenameParts[3])
+            outFeature.SetField("_LOD", filenameParts[4])
+            outFeature.SetField("_UREF", filenameParts[5])
+            outFeature.SetField("_RREF", filenameParts[6])
         # set the output features to match the input features
         for i in range(layerDefinition.GetFieldCount()):
             # Look for CNAM to link to the fClassRecord fields
@@ -307,26 +322,32 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
                outFeature.SetField(fieldName, fieldValue)
             else:
                outFeature.SetField(fieldName,inFeature.GetField(i))
+        if(fClassRecords != None):
+            #flatten attributes from the feature class attributes table
+            if(cnamValue in fClassRecords.keys()):
+                fclassFields = fClassRecords[cnamValue]
+                for field in fclassFields.keys():
+                    outFeature.SetField(fieldIndexes[field],fclassFields[field])
         #write the feature
         outLayer.CreateFeature(outFeature)
         outFeature = None
         inFeature = layer.GetNextFeature()
     outLayer.CommitTransaction()
     return featureCount,convertedFields
-
+'''
 #Return a dictionary of dictionaries 
 #The top level dictionary maps CNAME values to a dictionary of key/value pairs representing column names -> values
 def readDBF(dbfFilename):
     cNameRecords = {}
 
-    dbfFields = DBF(dbfFilename).fields
+    dbfFields = dbfread.DBF(dbfFilename).fields
 
-    for record in DBF(dbfFilename,load=True):
+    for record in dbfread.DBF(dbfFilename,load=True):
         recordFields = {}        
 
         for field in record.keys():
             recordFields[field] = record[field]
-            print(record)
+            #print(record)
 
         cNameRecords[record['CNAM']] = recordFields
             
@@ -334,12 +355,11 @@ def readDBF(dbfFilename):
 
 
 def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
-    a = readDBF(dbfFilename)
-    return
+    dbfTable = readDBF(dbfFilename)
     convertedFields = []
     cursor = sqliteCon.cursor()
     cursor.execute("BEGIN TRANSACTION")
-    dbfFields = DBF(dbfFilename).fields
+    dbfFields = dbfread.DBF(dbfFilename).fields
     createString = "CREATE TABLE '" + dbfTableName + "' ('fid' INTEGER PRIMARY KEY AUTOINCREMENT "
     firstField = True
     for fieldno in range(len(dbfFields)):
@@ -356,7 +376,6 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
         firstField = False
         createString += createFieldTypeString
     createString += ")"
-    #print(createString)
     
     cursor.execute(createString)
 
@@ -364,7 +383,7 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     contentsAttrs = (dbfTableName,dbfTableName,dbfTableName + " " + tableDescription)
     cursor.execute(contentsString,contentsAttrs)
 
-    for record in DBF(dbfFilename):
+    for record in dbfTable:
         #print(record)
         insertValues = []
         insertValuesString = ""

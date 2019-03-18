@@ -43,15 +43,25 @@ print("GDAL Version " + str(version_num))
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
+def cleanPath(path):
+    cleanPath = path.replace("/",'\\')
+    return cleanPath
 
-def translateCDB(cDBRoot, removeShapefile):
 
+def translateCDB(cDBRoot, outputDirectory):
+    os.makedirs(outputDirectory)
+    cDBRoot = cleanPath(cDBRoot)
+    outputDirectory = cleanPath(outputDirectory)
     sys.path.append(cDBRoot)
     import shapeindex
 
     ogrDriver = ogr.GetDriverByName("GPKG")
 
-    gpkgFileName = cDBRoot + "CDB.gpkg"
+    gpkgFileName = os.path.join(outputDirectory, "CDB.gpkg")
+    #Use the output directory
+
+    print("Output File: " + gpkgFileName)
+    
     gpkgFile = None
     for shapefile in shapeindex.shapeFiles:
         
@@ -122,26 +132,22 @@ def translateCDB(cDBRoot, removeShapefile):
         outLayer.CommitTransaction()
         print("Translated " + str(featureCount) + " features.")
         dataSource = None
-        if(removeShapefile):
-            converter.removeShapeFile(shapefile)
+
     gpkgFile = None
 
 
 if(len(sys.argv) != 2  and len(sys.argv) != 3):
-    print("Usage: Option2.py <Root CDB Directory> [remove-shapefiles]")
+    print("Usage: Option2.py <Root CDB Directory> <output directory>")
     print("Example:")
-    print("Option2.py F:\GeoCDB\Option2")
-    print("\n-or-\n")
-    print("Option2.py F:\GeoCDB\Option2 remove-shapefiles")
+    print("Option2.py F:\GeoCDB\Option2 F:\GeoCDB\Option2_output")
+
     exit()
 cDBRoot = sys.argv[1]
-removeShapefile = False
-if((len(sys.argv)==3) and sys.argv[2]=="remove-shapefiles"):
-    removeShapefile = True
+outputDirectory = sys.argv[2]
 
 sys.path.append(cDBRoot)
 if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
     cDBRoot = cDBRoot + '/'
 import generateMetaFiles
 generateMetaFiles.generateMetaFiles(cDBRoot)
-translateCDB(cDBRoot,removeShapefile)
+translateCDB(cDBRoot,outputDirectory)

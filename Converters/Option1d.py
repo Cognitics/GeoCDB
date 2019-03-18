@@ -27,7 +27,7 @@ import subprocess
 
 import converter
 import dbfconvert
-
+import RelatedTables
 try:
     from osgeo import ogr, osr, gdal
 except:
@@ -78,7 +78,7 @@ def getFilenameComponents(shpFilename):
 
     return components
 
-#TODO: Add fields for FC attributes, and link values in
+
 def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
     dbfFilename = converter.getFeatureClassAttrFileName(shpFilename)
 
@@ -186,8 +186,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIndexes[fieldName] = fieldIdx
         fieldIdx += 1
 
-        #create fields for featureClass Attributes
-    
+        #Create fields for featureClass Attributes
         for recordCNAM, row in fClassRecords.items():
             for fieldName,fieldValue in row.items():
                 if(fieldName in convertedFields):
@@ -240,32 +239,70 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
     gpkgFile.CommitTransaction()
     return featureCount
 
+
+def getOutputGeoPackageFilePath(shpFilename,cdbInputPath,cdbOutputPath):
+    baseShapefileName = os.path.basename(shpFilename)
+    inputDir = os.path.dirname(shpFilename)
+    outputDir = inputDir.replace(cdbInputPath,cdbOutputPath)
+    fulloutputFilePath = os.path.join(outputDir,baseShapefileName)
+    fullGPKGOutputFilePath = fulloutputFilePath[0:-4] + '.gpkg'
+    return fullGPKGOutputFilePath
+
+#create the extended attributes table
+def createExtendedAttributesTable(sqliteCon,shpFilename):
+    #create the table
+    if(sqliteCon == None):
+        print("Unable to access database when creating extended attributes table")
+        return None
+    extendedAttributesDBFFilename = converter.getExtendedAttrFileName(shpFilename)    
+    dbfTableName = getExtendedAttrTableName(shpFilename)
+    if(os.path.exists(extendedAttributesDBFFilename)):
+        return converter.convertDBF(sqliteCon,extendedAttributesDBFFilename,
+            dbfTableName,'Extended Attributes')
+    return None
+
+def getExtendedAttrTableName(shpFilename):
+    extendedAttributesDBFFilename = converter.getExtendedAttrFileName(shpFilename)
+    shpBaseFilename = os.path.basename(shpFilename)
+    dbfTableName = shpBaseFilename[0:-4]
+    return dbfTableName
+
 #convert a shapefile into a GeoPackage file using GDAL.
-def convertTable(sqliteCon, shpFilename, cdbInputDir, cdbOutputDir):
-    import converter
+def convertShapeFile(shpFilename, cdbInputDir, cdbOutputDir):    
     fcAttrName = converter.getFeatureClassAttrFileName(shpFilename)    
     if(fcAttrName==None):
         return None
     #Create the features table, adding the feature class columns
-    outputGeoPackageFile = converter.getOutputGeoPackageFilePath(shpFilename,cdbInputDir, cdbOutputDir)
+    outputGeoPackageFile = getOutputGeoPackageFilePath(shpFilename,cdbInputDir, cdbOutputDir)
     # Make whatever directories we need for the output file.
     parentDirectory = os.path.dirname(cleanPath(outputGeoPackageFile))
     if not os.path.exists(parentDirectory):
-        os.makedirs(parentDirectory)
-    ogrDriver = ogr.GetDriverByName("GPKG")
-    #create the extended attributes table
+        os.makedirs(parentDirectory)    
 
     #Read all the feature records from the DBF at once (using GDAL)
+    #copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
+    fClassRecords = converter.readDBF(fcAttrName)
+    #Read Featureclass records
+    featureTableName = converter.getFeatureAttrTableName(shpFilename)
     copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
+    #convertSHP(sqliteCon,shpFilename,outputGeoPackageFile, fClassRecords, True)
+    sqliteCon = sqlite3.connect(outputGeoPackageFile)
+    if(createExtendedAttributesTable(sqliteCon,shpFilename)):
+        dbfTableName = getExtendedAttrTableName(shpFilename)
+        RelatedTables.createRTESchema(sqliteCon)
+        relationship = RelatedTables.Relationship()
+        relationship.baseTableName = "fid"
+        relationship.baseTableName = featureTableName
+        relationship.baseTableColumn = "fid"
+        relationship.relatedTableName = dbfTableName
+        relationship.relationshipName = "CDB EA"
+        relationship.mappingTableName = featureTableName + "_" + dbfTableName
+        RelatedTables.addRelationshipTable(sqliteCon,relationship)
+        #TODO: Link all extended attributes via related tables
+        # For each feature row, match the CEAI,GEAI,VEAI records in the extended attributes
+        # table, and link them with RelatedTables.addFeatureRelationship
 
-    #Flatten Feature class records into the feature table
-        
-    #Link all extended attributes via related tables
-    return
-
-#Convert extended attributes table
-def convertExtendedAttributes(sqliteCon,dbfFileName,gpkgLayerName):
-    #DBF.convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
+    sqliteCon.close()
     return
 
 def translateCDB(cdbInputDir, cdbOutputDir):
@@ -274,7 +311,7 @@ def translateCDB(cdbInputDir, cdbOutputDir):
     shapeFiles = generateMetaFiles.generateMetaFiles(cDBRoot)
 
     for shapefile in shapeFiles:
-        convertTable(None,shapefile,cdbInputDir,cdbOutputDir)
+        convertShapeFile(shapefile,cdbInputDir,cdbOutputDir)
 
 
 if(len(sys.argv) != 3):

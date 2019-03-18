@@ -336,7 +336,7 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
     cursor.execute("COMMIT TRANSACTION")
     return convertedFields
 
-def translateCDB(cDBRoot, removeShapefile):
+def translateCDB(cDBRoot, outputRootDirectory):
     sys.path.append(cDBRoot)
     import shapeindex
     datasourceDict = {}
@@ -365,6 +365,8 @@ def translateCDB(cDBRoot, removeShapefile):
         shapename = base[0:-4]
         # Create a geotile geopackage
         fullGpkgPath = subdir + ".gpkg"
+        #Use the same directory structure, but a different root directory.
+        fullGpkgPath = fullGpkgPath.replace(cDBRoot,outputRootDirectory)
         gpkgFile = None
         if(fullGpkgPath in datasourceDict.keys()):
             gpkgFile = datasourceDict[fullGpkgPath]
@@ -379,18 +381,7 @@ def translateCDB(cDBRoot, removeShapefile):
         sqliteCon = sqlite3.connect(fullGpkgPath)
         #gpkgFileName = subdir + "\\" + lat + "\\" + lon + "\\" + dataset + ".gpkg"
         featureTableName = base
-                                    
-        # T015 2D Relationship dataset connections
-        #todo
-        # If it's 2D Relationship dataset connections (T015)
-        #todo
-        # 2D relationship tile connections (T011)
-        #todo
 
-        # Add Layer
-
-                                
-        
         featureClassAttrTableName = ""
         extendedAttrTableName = ""
         dbfFilename = shapefile
@@ -426,27 +417,21 @@ def translateCDB(cDBRoot, removeShapefile):
         if(featureCount>0):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
-        
-        if(removeShapefile):
-            converter.removeShapefile(cDBRoot + shapefile)
+
 
 if(len(sys.argv)!=3 and len(sys.argv)!=2):
-    print("Usage: Option3.py <Root CDB Directory> [remove-shapefiles]")
+    print("Usage: Option3.py <Root CDB Directory> <Root Output Director>")
     print("Example:")
-    print("Option3.py F:\GeoCDB\Option3")
-    print("\n-or-\n")
-    print("Option3.py F:\GeoCDB\Option3 remove-shapefiles")
+    print("Option3.py F:\GeoCDB\Option3 F:\GeoCDB\Option3_output")
+
     exit()
 
 
 cDBRoot = sys.argv[1]
-removeShapefile = False
-if((len(sys.argv)==3) and sys.argv[2]=="remove-shapefiles"):
-    removeShapefile = True
-
+outputDirectory = sys.argv[2]
 sys.path.append(cDBRoot)
 if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
     cDBRoot = cDBRoot + '/'
 import generateMetaFiles
 #generateMetaFiles.generateMetaFiles(cDBRoot)
-translateCDB(cDBRoot,removeShapefile)
+translateCDB(cDBRoot,outputDirectory)
