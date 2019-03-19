@@ -49,7 +49,7 @@ def translateCDB(cDBRoot,ogrPath, removeShapefile):
         geoPackageFile = shapefile[0:-3] + "gpkg"
         if(os.path.getsize(shapefile)>0):
             #'-t_srs', 'EPSG:4326', '-s_srs', 'EPSG:4326', 
-            subprocess.call([ogrPath,'-f', 'GPKG', geoPackageFile,shapefile])
+            subprocess.call([ogrPath, '-f', 'GPKG', geoPackageFile, "-lco", "FID=id", shapefile])
             print(shapefile + ' -> ' + geoPackageFile)
         if(removeShapefile):
             converter.removeShapeFile(shapefile)
