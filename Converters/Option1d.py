@@ -122,7 +122,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
             fieldIndexes[fieldName] = fieldIdx
             fieldIdx += 1
     else:
-        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType(),options=["FID=id"])
         
         # Add fields
         for i in range(layerDefinition.GetFieldCount()):
@@ -193,7 +193,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
                     continue
                 fieldTypeCode = ogr.OFTString
                 if(isinstance(fieldValue,float)):
-                    fieldTypeCode = ogr.OFSTFloat32
+                    fieldTypeCode = ogr.OFTReal
                 if(isinstance(fieldValue,int)):
                     fieldTypeCode = ogr.OFTInteger
                 if(isinstance(fieldValue,bool)):
