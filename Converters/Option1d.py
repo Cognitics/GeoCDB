@@ -197,8 +197,9 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
                     fieldTypeCode = ogr.OFTReal
                 if(isinstance(fieldValue,int)):
                     fieldTypeCode = ogr.OFTInteger
-                if(isinstance(fieldValue,bool)):
-                    fieldTypeCode = ogr.OFSTBoolean
+                #DBase logical fields can have multiple values for true and false, best converted as text
+                #if(isinstance(fieldValue,bool)):
+                #    fieldTypeCode = ogr.OFSTBoolean
                 fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
 
                 outLayer.CreateField(fieldDef)
