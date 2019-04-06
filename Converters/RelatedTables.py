@@ -5,6 +5,7 @@ class Relationship:
         self.baseTableName = ""
         self.baseTableColumn = ""
         self.relatedTableName = ""
+        self.relatedTableColumn = ""
         self.relationshipName = ""
         self.mappingTableName = ""
 
@@ -18,20 +19,20 @@ def createRTESchema(sqliteCon):
     #if(len(rows)==0):
     #    query = "insert into gpkg_extensions (table_name"
 
-    query = '''CREATE TABLE IF NOT EXISTS 'gpkgext_relations' "
-        "( id INTEGER PRIMARY KEY AUTOINCREMENT, base_table_name TEXT NOT NULL, "
-        "base_primary_column TEXT NOT NULL DEFAULT 'id', related_table_name TEXT NOT NULL, "
-        "related_primary_column TEXT NOT NULL DEFAULT 'id', relation_name TEXT NOT NULL, "
-        "mapping_table_name TEXT NOT NULL UNIQUE )'''
+    query = '''CREATE TABLE IF NOT EXISTS 'gpkgext_relations'
+        ( id INTEGER PRIMARY KEY AUTOINCREMENT, base_table_name TEXT NOT NULL,
+        base_primary_column TEXT NOT NULL DEFAULT 'id', related_table_name TEXT NOT NULL,
+        related_primary_column TEXT NOT NULL DEFAULT 'id', relation_name TEXT NOT NULL,
+        mapping_table_name TEXT NOT NULL UNIQUE )'''
     cur.execute(query)
     sqliteCon.commit()
 
 
 def addRelatedMediaTable(sqliteCon, tableName):
-    query = "CREATE TABLE IF NOT EXISTS '" + tableName + "' ( id INTEGER PRIMARY KEY AUTOINCREMENT, data BLOB NOT NULL, content_type TEXT NOT NULL )"
+    query = "CREATE TABLE IF NOT EXISTS '" + tableName + "' ( id INTEGER PRIMARY KEY AUTOINCREMENT, data BLOB NOT NULL, content_type TEXT NOT NULL, name TEXT )"
     cur = sqliteCon.cursor()
     cur.execute("BEGIN")
-    #todo
+    cur.execute(query)
     sqliteCon.commit()
 
 def addRelationshipTable(sqliteCon, relationship):
@@ -41,7 +42,7 @@ def addRelationshipTable(sqliteCon, relationship):
     cur.execute(query)
     query = '''
         INSERT INTO gpkgext_relations (base_table_name,base_primary_column,related_table_name,related_primary_column,
-            relation_name,mapping_table_name) VALUES(?,?,?,?,?,?)"
+            relation_name,mapping_table_name) VALUES(?,?,?,?,?,?)
             '''
     parameters = (relationship.baseTableName,
         relationship.baseTableColumn,
@@ -85,8 +86,17 @@ def addFeatureRelationship(sqliteCon,relationship,baseId,relatedId):
     cur = sqliteCon.cursor()
     cur.execute("BEGIN")
     query = "INSERT INTO " + relationship.mappingTableName + " (base_id,related_id) VALUES(?,?)"
+    cur.execute(query,(baseId,relatedId))
+    sqliteCon.commit()
+
+def insertMedia(sqliteCon,tableName,blob, contentType, name):
     cur = sqliteCon.cursor()
-    cur.execute("BEGIN",(baseId,relatedId))
-    cur.commit()
+    cur.execute("BEGIN")
+    query = "INSERT INTO " + tableName + " (data,content_type,name) VALUES(?,?,?)"
+    cur.execute(query,(blob,contentType,name))
+    sqliteCon.commit()
+    cur.execute("select last_insert_rowid() as id")
+    for row in cur:
+        return row[0]
 
 
