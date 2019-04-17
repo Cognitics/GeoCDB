@@ -344,7 +344,8 @@ def convertDBF(sqliteCon,dbfFilename,dbfTableName,tableDescription):
 
 def translateCDB(cDBRoot, outputRootDirectory):
     sys.path.append(cDBRoot)
-    import shapeindex
+    import generateMetaFiles
+    shapeFiles = generateMetaFiles.generateMetaFiles(cDBRoot)
     datasourceDict = {}
     ogrDriver = ogr.GetDriverByName("GPKG")
     # Look for the Tiles Directory
@@ -352,7 +353,7 @@ def translateCDB(cDBRoot, outputRootDirectory):
     #   For each whole Longitude
     #   Create N45W120.gpkg
     #   Walk the subdirectory below this
-    for shapefile in shapeindex.shapeFiles:
+    for shapefile in shapeFiles:
         fileparts = shapefile.split('\\')
         subdir = ""
         for i in range(len(fileparts)-4):
@@ -442,6 +443,7 @@ def translateCDB(cDBRoot, outputRootDirectory):
         if(featureCount>0):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
+
 
 if(len(sys.argv) != 3):
     print("Usage: Option4.py <Input Root CDB Directory> <Output Directory for GeoPackage Files>")
