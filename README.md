@@ -13,6 +13,26 @@ _use at your own risk_.
 Please contact kbentley@cognitics.net with any questions, comments, pull requests,
 etc.
 
+## Converter Procedure
+
+* Software Installations
+  * Download and install python 3.7 (I think the script was tested with 3.6, but 3.7 has worked good)
+    * https://www.python.org/ftp/python/3.7.2/python-3.7.2-amd64.exe
+  * Download and unzip GDAL executable somewhere on disk (if you don’t already have it)
+    * http://download.gisinternals.com/sdk/downloads/release-1900-x64-gdal-2-4-0-mapserver-7-2-2.zip
+  * Download and install the GDAL python package
+    * http://download.gisinternals.com/sdk/downloads/release-1900-x64-gdal-2-4-0-mapserver-7-2-2/GDAL-2.4.0.win-amd64-py3.7.msi
+  * Download and install the dbfread python library
+    * https://files.pythonhosted.org/packages/4c/94/51349e43503e30ed7b4ecfe68a8809cdb58f722c0feb79d18b1f1e36fe74/dbfread-2.0.7-py2.py3-none-any.whl
+    * python -m pip install _pathToDownloadedFileAbove_
+  * There is probably easier ways to install these python packages, but our work internet breaks the easier methods that auto download and install
+* Running the converter
+  * Add the GDAL bin directory in the path (first, in case other programs have older versions of GDAL)
+    * set PATH=_gdalBinDir_;%PATH%
+    * set GDAL_DATA=_gdalBinDir_\gdal-data
+* Run the conversion
+  * pathToConverters\Option1d.py _PathToInputCDB_ _PathToOutputCDB_
+
 ---
 Copyright 2018, US Army Geospatial Center, Leidos Inc., and Cognitics Inc.
 

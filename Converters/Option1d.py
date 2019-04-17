@@ -105,6 +105,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
     outLayerName = getOutputLayerName(shpFilename)
 
     ogrDriver = ogr.GetDriverByName("GPKG")
+    #print("  Creating file " + gpkgFilename)
     gpkgFile = ogrDriver.CreateDataSource(gpkgFilename)
 
     if(gpkgFile == None):
@@ -122,7 +123,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
             fieldIndexes[fieldName] = fieldIdx
             fieldIdx += 1
     else:
-        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType(),options=["FID=id"])
         
         # Add fields
         for i in range(layerDefinition.GetFieldCount()):
@@ -193,11 +194,12 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
                     continue
                 fieldTypeCode = ogr.OFTString
                 if(isinstance(fieldValue,float)):
-                    fieldTypeCode = ogr.OFSTFloat32
+                    fieldTypeCode = ogr.OFTReal
                 if(isinstance(fieldValue,int)):
                     fieldTypeCode = ogr.OFTInteger
-                if(isinstance(fieldValue,bool)):
-                    fieldTypeCode = ogr.OFSTBoolean
+                #DBase logical fields can have multiple values for true and false, best converted as text
+                #if(isinstance(fieldValue,bool)):
+                #    fieldTypeCode = ogr.OFSTBoolean
                 fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
 
                 outLayer.CreateField(fieldDef)
@@ -217,8 +219,6 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         #Copy the geometry and attributes 
         outFeature.SetFrom(inFeature)
 
-        cnamValue = inFeature.GetField('CNAM')
-        fclassRecord = fClassRecords[cnamValue]
         outFeature.SetField(fieldIndexes["_DATASET_CODE"], layerComponents['datasetcode'])
         outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_1"], layerComponents['selector1'])
         outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_2"], layerComponents['selector2'])
@@ -226,11 +226,17 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         outFeature.SetField(fieldIndexes["_UREF"], layerComponents['uref'])
         outFeature.SetField(fieldIndexes["_RREF"], layerComponents['rref'])
         
-        #flatten attributes from the feature class attributes table
-        if(cnamValue in fClassRecords.keys()):
-            fclassFields = fClassRecords[cnamValue]
-            for field in fclassFields.keys():
-                outFeature.SetField(fieldIndexes[field],fclassFields[field])
+        #flatten attributes from the feature class attributes table, if a CNAM attribute exists
+        try:
+            cnamValue = inFeature.GetField('CNAM')
+            fclassRecord = fClassRecords[cnamValue]
+            if(cnamValue in fClassRecords.keys()):
+                fclassFields = fClassRecords[cnamValue]
+                for field in fclassFields.keys():
+                    outFeature.SetField(fieldIndexes[field],fclassFields[field])
+        except:
+            #print("    File does not contain the CNAM attribute")
+            cnamValue = ""
 
         #write the feature
         outLayer.CreateFeature(outFeature)
@@ -281,13 +287,13 @@ def convertShapeFile(shpFilename, cdbInputDir, cdbOutputDir):
 
     #Read all the feature records from the DBF at once (using GDAL)
     #copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
-    fClassRecords = converter.readDBF(fcAttrName)
+    #fClassRecords = converter.readDBF(fcAttrName)
     #Read Featureclass records
     featureTableName = converter.getFeatureAttrTableName(shpFilename)
     copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
     #convertSHP(sqliteCon,shpFilename,outputGeoPackageFile, fClassRecords, True)
     sqliteCon = sqlite3.connect(outputGeoPackageFile)
-    if(createExtendedAttributesTable(sqliteCon,shpFilename)):
+    if(0 and createExtendedAttributesTable(sqliteCon,shpFilename)):
         dbfTableName = getExtendedAttrTableName(shpFilename)
         RelatedTables.createRTESchema(sqliteCon)
         relationship = RelatedTables.Relationship()
