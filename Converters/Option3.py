@@ -38,6 +38,9 @@ print("GDAL Version " + str(version_num))
 if version_num < 2020300:
     sys.exit('ERROR: Python bindings of GDAL 2.2.3 or later required due to GeoPackage performance issues.')
 
+def cleanPath(path):
+    cleanPath = path.replace("\\",'/')
+    return cleanPath
 
 def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclassSelector, extAttrSelector):
     featureCount = 0
@@ -64,9 +67,9 @@ def convertTable(gpkgFile, sqliteCon, datasetName, shpFilename,  selector, fclas
     extendedAttrTableName = base.replace(selector,extAttrSelector)
     extendedAttrTableName = extendedAttrTableName[:-4]
     extendedAttrFields = []
-    if(os.path.isfile(dbfFilename)):
-        opendbf = True
-        extendedAttrFields = convertDBF(sqliteCon,dbfFilename,extendedAttrTableName, 'Feature Extended Attributes')
+    #if(os.path.isfile(dbfFilename)):
+    #    opendbf = True
+    #    extendedAttrFields = convertDBF(sqliteCon,dbfFilename,extendedAttrTableName, 'Feature Extended Attributes')
     shpFields = []
     featureCount = convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName,fClassRecords)
     
@@ -103,7 +106,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
     base,ext = os.path.splitext(filenameOnly)
     dataSource = ogr.Open(shpFilename)
     if(dataSource==None):
-        # print("Unable to open " + shpFilename)
+        print("Unable to open " + shpFilename)
         return 0
     layer = dataSource.GetLayer(0)
     if(layer == None):
@@ -136,7 +139,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
             fieldIndexes[fieldName] = fieldIdx
             fieldIdx += 1
     else:
-        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType(),options=["FID=id"])
         
         # Add fields
         for i in range(layerDefinition.GetFieldCount()):
@@ -200,19 +203,19 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIndexes[fieldName] = fieldIdx
         fieldIdx += 1
 
-        #create fields for featureClass Attributes
-    
+        #Create fields for featureClass Attributes
         for recordCNAM, row in fClassRecords.items():
             for fieldName,fieldValue in row.items():
                 if(fieldName in convertedFields):
                     continue
                 fieldTypeCode = ogr.OFTString
                 if(isinstance(fieldValue,float)):
-                    fieldTypeCode = ogr.OFSTFloat32
+                    fieldTypeCode = ogr.OFTReal
                 if(isinstance(fieldValue,int)):
                     fieldTypeCode = ogr.OFTInteger
-                if(isinstance(fieldValue,bool)):
-                    fieldTypeCode = ogr.OFSTBoolean
+                #DBase logical fields can have multiple values for true and false, best converted as text
+                #if(isinstance(fieldValue,bool)):
+                #    fieldTypeCode = ogr.OFSTBoolean
                 fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
 
                 outLayer.CreateField(fieldDef)
@@ -232,34 +235,37 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         #Copy the geometry and attributes 
         outFeature.SetFrom(inFeature)
 
-        cnamValue = inFeature.GetField('CNAM')
-        fclassRecord = fClassRecords[cnamValue]
         outFeature.SetField(fieldIndexes["_DATASET_CODE"], filenameParts[1])
         outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_1"], filenameParts[2])
         outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_2"], filenameParts[3])
         outFeature.SetField(fieldIndexes["_LOD"], filenameParts[4])
         outFeature.SetField(fieldIndexes["_UREF"], filenameParts[5])
         outFeature.SetField(fieldIndexes["_RREF"], filenameParts[6])
-        
-        '''
-        # set the output features to match the input features
-        for i in range(layerDefinition.GetFieldCount()):
-            # Look for CNAM to link to the fClassRecord fields
-            fieldName = layerDefinition.GetFieldDefn(i).GetNameRef()
-            if(fieldName in ("_DATASET_CODE","_COMPONENT_SELECTOR_1","_COMPONENT_SELECTOR_2","_LOD","_UREF","_RREF")):
-                continue
-            if(fieldName in fclassRecord):
-                fieldValue = fclassRecord[fieldName]
-            if((fclassRecord != None) and (fieldName in fclassRecord)):
-               outFeature.SetField(fieldIndexes[fieldName], fieldValue)
-            else:
-               outFeature.SetField(fieldIndexes[fieldName],inFeature.GetField(i))
-        '''
+
+        #flatten attributes from the feature class attributes table, if a CNAM attribute exists
+        try:
+            cnamValue = inFeature.GetField('CNAM')
+            fclassRecord = fClassRecords[cnamValue]
+            for i in range(layerDefinition.GetFieldCount()):
+                # Look for CNAM to link to the fClassRecord fields
+                fieldName = layerDefinition.GetFieldDefn(i).GetNameRef()
+                if(fieldName in ("_DATASET_CODE","_COMPONENT_SELECTOR_1","_COMPONENT_SELECTOR_2","_LOD","_UREF","_RREF")):
+                    continue
+                if(fieldName in fclassRecord):
+                    fieldValue = fclassRecord[fieldName]
+                if((fclassRecord != None) and (fieldName in fclassRecord)):
+                   outFeature.SetField(fieldIndexes[fieldName], fieldValue)
+                else:
+                   outFeature.SetField(fieldIndexes[fieldName],inFeature.GetField(i))
+        except:
+            #print("    File does not contain the CNAM attribute")
+            cnamValue = ""
+
         #write the feature
         outLayer.CreateFeature(outFeature)
         outFeature = None
         inFeature = layer.GetNextFeature()
-    
+
     return featureCount
 
 #Return a dictionary of dictionaries 
@@ -363,10 +369,18 @@ def translateCDB(cDBRoot, outputRootDirectory):
         selector2 = base[18:22]
         # strip out the .shp
         shapename = base[0:-4]
+        print("  Processing file " + shapename)
         # Create a geotile geopackage
         fullGpkgPath = subdir + ".gpkg"
+        print("    Output file " + datasetName + ".gpkg")
         #Use the same directory structure, but a different root directory.
         fullGpkgPath = fullGpkgPath.replace(cDBRoot,outputRootDirectory)
+
+        # Make whatever directories we need for the output file.
+        parentDirectory = os.path.dirname(cleanPath(fullGpkgPath))
+        if not os.path.exists(parentDirectory):
+            os.makedirs(parentDirectory)
+
         gpkgFile = None
         if(fullGpkgPath in datasourceDict.keys()):
             gpkgFile = datasourceDict[fullGpkgPath]
@@ -385,7 +399,7 @@ def translateCDB(cDBRoot, outputRootDirectory):
         featureClassAttrTableName = ""
         extendedAttrTableName = ""
         dbfFilename = shapefile
-        print(dbfFilename)
+        #print(dbfFilename)
 
         # If it's a polygon (T005)
         # T006 Polygon feature class attributes
@@ -419,19 +433,13 @@ def translateCDB(cDBRoot, outputRootDirectory):
         gpkgFile.CommitTransaction()
 
 
-if(len(sys.argv)!=3 and len(sys.argv)!=2):
-    print("Usage: Option3.py <Root CDB Directory> <Root Output Director>")
+if(len(sys.argv) != 3):
+    print("Usage: Option3.py <Input Root CDB Directory> <Output Directory for GeoPackage Files>")
     print("Example:")
     print("Option3.py F:\GeoCDB\Option3 F:\GeoCDB\Option3_output")
-
     exit()
 
 
 cDBRoot = sys.argv[1]
 outputDirectory = sys.argv[2]
-sys.path.append(cDBRoot)
-if((cDBRoot[-1:]!='\\') and (cDBRoot[-1:]!='/')):
-    cDBRoot = cDBRoot + '/'
-import generateMetaFiles
-#generateMetaFiles.generateMetaFiles(cDBRoot)
 translateCDB(cDBRoot,outputDirectory)
