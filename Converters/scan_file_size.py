@@ -24,38 +24,42 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 import sys
-
-cDBRoot = r'D:\CDB\northwest_cdb_part2'
-fileCount = 0
-totalSize = 0
-
-#create python file for the dictionary
-
-# shapeFiles = ['xxx.shp','yyy.shp']
-
-pyFile = open('shapeindex.py','w')
-pyFile.write('shapeFiles = [')
-first = True
-for root, dirs, files in os.walk(cDBRoot):
-    path = root.split(os.sep)
-    hasShapeFile = False
-    for file in files:
-        base,ext = os.path.splitext(file)
-        filePath = os.path.join(root,file)
-        if((ext==".shp") or 
-           (ext==".dbf") or
-           (ext==".dbt") or
-           (ext==".shx")):
-            fileCount += 1
-            totalSize += os.path.getsize(filePath)
-            if(ext==".shp"):
-                if(first != True):
-                    pyFile.write(",")
-                first = False
-                # Add this file to the list if it's a shape file
-                pyFile.write("\n\tr'" + filePath + "'")
-pyFile.write(']\n')
-print("Total File Count:" + str(fileCount))
-print("Total File Size:" + str(totalSize))
+import math
 
 
+def scanDirectory(cDBRoot):
+    allocUnits = [2048,4096,8192,16384,128*1024,256*1024]
+    fileCount = 0
+    totalFileSize = 0
+    totalDiskSizes = {} # Key is the alloc unit size, value is the accumulated size
+    for allocationUnitSize in allocUnits:
+        totalDiskSizes[allocationUnitSize] = 0
+
+    for root, dirs, files in os.walk(cDBRoot):
+        path = root.split(os.sep)
+        for file in files:
+            base,ext = os.path.splitext(file)
+            filePath = os.path.join(root,file)
+            if((ext==".shp") or 
+            (ext==".dbf") or
+            (ext==".dbt") or
+            (ext==".shx")):
+                actualFileSize = os.path.getsize(filePath)
+                totalFileSize += actualFileSize
+                fileCount += 1
+                for allocationUnitSize in allocUnits:
+                    onDiskSize = (math.ceil(actualFileSize / allocationUnitSize)  * allocationUnitSize)
+                    totalDiskSizes[allocationUnitSize] = totalDiskSizes[allocationUnitSize] + onDiskSize
+                    
+        #pyFile.write(']\n')
+    print("Total File Count:" + str(fileCount))
+    print("Total File Size:" + str(totalFileSize))
+    print("Total On Disk Size:")
+    print("0," + str(totalFileSize))
+    for allocationUnitSize in allocUnits:
+        print(str(allocationUnitSize) + "," + str(totalDiskSizes[allocationUnitSize]))
+    
+
+scanDirectory(r'E:\CDB\northwest_cdb_part2')
+#scanDirectory(r'E:\MUTC_CDB')
+#scanDirectory(r'E:\CDB_Yemen_4.0.0')

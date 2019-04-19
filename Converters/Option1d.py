@@ -122,7 +122,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
             fieldIndexes[fieldName] = fieldIdx
             fieldIdx += 1
     else:
-        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType())
+        outLayer = gpkgFile.CreateLayer(outLayerName,srs,geom_type=layerDefinition.GetGeomType(),options=["FID=id"])
         
         # Add fields
         for i in range(layerDefinition.GetFieldCount()):
@@ -277,7 +277,7 @@ def convertShapeFile(shpFilename, cdbInputDir, cdbOutputDir):
     # Make whatever directories we need for the output file.
     parentDirectory = os.path.dirname(cleanPath(outputGeoPackageFile))
     if not os.path.exists(parentDirectory):
-        os.makedirs(parentDirectory)    
+        os.makedirs(parentDirectory)
 
     #Read all the feature records from the DBF at once (using GDAL)
     #copyFeaturesFromShapeToGeoPackage(shpFilename,outputGeoPackageFile)
