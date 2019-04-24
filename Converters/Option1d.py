@@ -47,15 +47,17 @@ def cleanPath(path):
 
 def getOutputLayerName(shpFilename):
     filenameOnly = os.path.basename(shpFilename)
-    filenameParts = filenameOnly.split("_")
+    baseName,ext = os.path.splitext(filenameOnly)
+    filenameParts = baseName.split("_")
     datasetCode = filenameParts[1]
     datasetName = filenameParts[-4]
     componentSelector1 = filenameParts[2]
     componentSelector2 = filenameParts[3]
     lod = filenameParts[4]
     uref = filenameParts[5]
+    rref = filenameParts[6]
     #Create the layer if it doesn't already exist.
-    outLayerName = datasetName + "_" + lod + "_" + componentSelector1 + "_" + componentSelector2
+    outLayerName = datasetCode + "_" + componentSelector1 + "_" + componentSelector2 + "_" + lod + "_" + uref + "_" + rref
     return outLayerName
 
 def getFilenameComponents(shpFilename):
@@ -105,7 +107,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
     outLayerName = getOutputLayerName(shpFilename)
 
     ogrDriver = ogr.GetDriverByName("GPKG")
-    #print("  Creating file " + gpkgFilename)
+    print("  Creating file " + gpkgFilename)
     gpkgFile = ogrDriver.CreateDataSource(gpkgFilename)
 
     if(gpkgFile == None):
