@@ -66,17 +66,20 @@ def getFilenameComponents(shpFilename):
     baseName,ext = os.path.splitext(filenameOnly)
     filenameParts = baseName.split("_")
     datasetCode = filenameParts[1]
-    components['datasetcode'] = datasetCode
+    components['datasetcode'] = int(datasetCode[1:])
     componentSelector1 = filenameParts[2]
-    components['selector1'] = componentSelector1
+    components['selector1'] = int(componentSelector1[1:])
     componentSelector2 = filenameParts[3]
-    components['selector2'] = componentSelector2
+    components['selector2'] = int(componentSelector2[1:])
     lod = filenameParts[4]
-    components['lod'] = lod
+    if (lod[:2] == "LC"):
+        components['lod'] = -int(lod[2:])
+    else:
+        components['lod'] = int(lod[1:])
     uref = filenameParts[5]
-    components['uref'] = uref
+    components['uref'] = int(uref[1:])
     rref = filenameParts[6]
-    components['rref'] = rref
+    components['rref'] = int(rref[1:])
 
     return components
 
@@ -142,7 +145,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
 
         # Add the LOD and UXX fields
         fieldName =  "_DATASET_CODE"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -150,7 +153,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIdx += 1
 
         fieldName =  "_COMPONENT_SELECTOR_1"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -158,7 +161,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIdx += 1
 
         fieldName =  "_COMPONENT_SELECTOR_2"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -166,7 +169,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIdx += 1
 
         fieldName =  "_LOD"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -174,7 +177,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIdx += 1
 
         fieldName =  "_UREF"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -182,7 +185,7 @@ def copyFeaturesFromShapeToGeoPackage(shpFilename, gpkgFilename):
         fieldIdx += 1
 
         fieldName =  "_RREF"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)

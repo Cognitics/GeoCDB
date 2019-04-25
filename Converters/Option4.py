@@ -122,8 +122,17 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
     componentSelector2 = filenameParts[3]
     lod = filenameParts[4]
     uref = filenameParts[5]
-    rref = filenameParts[6]   
+    rref = filenameParts[6]
 
+    datasetCodeInt = int(datasetCode[1:])
+    componentSelector1Int = int(componentSelector1[1:])
+    componentSelector2Int = int(componentSelector2[1:])
+    if (lod[:2] == "LC"):
+        lodInt = -int(lod[2:])
+    else:
+        lodInt = int(lod[1:])
+    urefInt = int(uref[1:])
+    rrefInt = int(rref[1:])
     
     #Create the layer if it doesn't already exist.
     outLayerName = datasetName + "_" + componentSelector1 + "_" + componentSelector2
@@ -156,7 +165,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
 
         # Add the LOD and UXX fields
         fieldName =  "_DATASET_CODE"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -164,7 +173,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIdx += 1
 
         fieldName =  "_COMPONENT_SELECTOR_1"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -172,7 +181,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIdx += 1
 
         fieldName =  "_COMPONENT_SELECTOR_2"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -180,7 +189,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIdx += 1
 
         fieldName =  "_LOD"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -188,7 +197,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIdx += 1
 
         fieldName =  "_UREF"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -196,7 +205,7 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         fieldIdx += 1
 
         fieldName =  "_RREF"
-        fieldTypeCode = ogr.OFTString
+        fieldTypeCode = ogr.OFTInteger
         fieldDef = ogr.FieldDefn(fieldName,fieldTypeCode)
         outLayer.CreateField(fieldDef)
         convertedFields.append(fieldName)
@@ -235,12 +244,12 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
         #Copy the geometry and attributes 
         outFeature.SetFrom(inFeature)
 
-        outFeature.SetField(fieldIndexes["_DATASET_CODE"], filenameParts[1])
-        outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_1"], filenameParts[2])
-        outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_2"], filenameParts[3])
-        outFeature.SetField(fieldIndexes["_LOD"], filenameParts[4])
-        outFeature.SetField(fieldIndexes["_UREF"], filenameParts[5])
-        outFeature.SetField(fieldIndexes["_RREF"], filenameParts[6])
+        outFeature.SetField(fieldIndexes["_DATASET_CODE"], datasetCodeInt)
+        outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_1"], componentSelector1Int)
+        outFeature.SetField(fieldIndexes["_COMPONENT_SELECTOR_2"], componentSelector2Int)
+        outFeature.SetField(fieldIndexes["_LOD"], lodInt)
+        outFeature.SetField(fieldIndexes["_UREF"], urefInt)
+        outFeature.SetField(fieldIndexes["_RREF"], rrefInt)
 
         #flatten attributes from the feature class attributes table, if a CNAM attribute exists
         try:
