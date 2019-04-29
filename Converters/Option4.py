@@ -112,6 +112,10 @@ def convertSHP(sqliteCon,shpFilename,gpkgFile,datasetName, fClassRecords):
     if(layer == None):
         print("Unable to read layer from " + shpFilename)
         return 0
+    inFeature = layer.GetNextFeature()
+    if inFeature is None:
+        # If no features, the class-level attributes don't get created correctly, so don't create the attribute definitions
+        return 0
     layerDefinition = layer.GetLayerDefn()
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
