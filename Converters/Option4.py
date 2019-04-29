@@ -1,4 +1,4 @@
-'''
+﻿'''
 Copyright 2018, US Army Geospatial Center, Leidos Inc., and Cognitics Inc.
 
 Developed as a joint work by The Army Geospatial Center, Leidos Inc., 
@@ -456,6 +456,11 @@ def translateCDB(cDBRoot, outputRootDirectory):
         if(featureCount>0):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
+
+    # Close the GeoPackage files
+    for gpkgPath in datasourceDict.keys():
+        datasourceDict[gpkgPath] = None;
+
 
 
 if(len(sys.argv) != 3):

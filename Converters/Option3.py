@@ -446,6 +446,11 @@ def translateCDB(cDBRoot, outputRootDirectory):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
 
+    # Close the GeoPackage files
+    for gpkgPath in datasourceDict.keys():
+        datasourceDict[gpkgPath] = None;
+
+
 
 if(len(sys.argv) != 3):
     print("Usage: Option3.py <Input Root CDB Directory> <Output Directory for GeoPackage Files>")
