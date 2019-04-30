@@ -406,7 +406,8 @@ def translateCDB(cDBRoot, outputRootDirectory):
             continue
         gpkgFile.StartTransaction()
 
-        sqliteCon = sqlite3.connect(fullGpkgPath)
+        #sqliteCon = sqlite3.connect(fullGpkgPath)
+        sqliteCon = None
         #gpkgFileName = subdir + "\\" + lat + "\\" + lon + "\\" + dataset + ".gpkg"
         featureTableName = base
                                     
@@ -457,7 +458,24 @@ def translateCDB(cDBRoot, outputRootDirectory):
             print("Translated " + str(featureCount) + " features.")
         gpkgFile.CommitTransaction()
 
+    # Get the table names
+    print("Creating search index tables")
+    for gpkgPath in datasourceDict.keys():
+        sqliteCon = sqlite3.connect(gpkgPath)
+        sql = "SELECT table_name from gpkg_contents"
+        fkCursor = sqliteCon.cursor()
+        fkCursor.execute(sql)
+        rows = fkCursor.fetchall()
+        for row in rows:
+            #print(row[0])
+            sql = "CREATE INDEX '" + row[0] + "_idx' on '" + row[0] + "' (_LOD, _UREF, _RREF)"
+            fkCursor.execute(sql)
+            #print(sql);
+            
+
+
     # Close the GeoPackage files
+    print("Closing GeoPackage files")
     for gpkgPath in datasourceDict.keys():
         datasourceDict[gpkgPath] = None;
 
